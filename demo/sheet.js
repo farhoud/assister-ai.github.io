@@ -9,8 +9,9 @@ window.onload = () => {
     const container = document.getElementById('sheet');
     const hot = new Handsontable(container, {
         data: data,
+
         rowHeaders: true,
-        colHeaders: true,
+        colHeaders: ['A', 'B', 'C','D','E'],
         filters: true,
         dropdownMenu: true,
         outsideClickDeselects: false,
@@ -18,6 +19,28 @@ window.onload = () => {
     });
     window.Handsontable = Handsontable;
     window.hot = hot;
+
+    setTimeout(()=>window.postMessage({
+        type: "TFXI_HANDSHAKE",
+        command: '',
+        args: [''],
+        tfx: '',
+        hint: 'format [cells] as [formatType]',
+        sample: 'format A1:A3 date',
+        voiceContext: []}, "*"), 1000);
+    window.addEventListener("message", function (event) {
+        // We only accept messages from ourselves
+        if (event.source !== window)
+            return;
+
+        if (event.data.type && (event.data.type === "FROM_SANAZ")) {
+            console.log("App received: " + JSON.stringify(event.data));
+            if(tfx.hasOwnProperty(event.data.command)){
+                console.log(event.data)
+                tfx[event.data.command](...event.data.params)
+            }
+        }
+    }, false);
 };
 
 const tfx = {};
@@ -64,14 +87,37 @@ function parseSelection(selection) {
 
 tfx.select = selection => {
     // e.g. tfx.select('A1:B2,B3,D2:E2')
-    window.hot.selectCells(parseSelection(selection));
+    console.log('selection func')
+    console.log(selection)
+    if(selection.element.toLowerCase()==='column'){
+        console.log('im a columns')
+        let name = +selection.name;
+        if(isNaN(name)){
+            console.log(selection.name)
+            window.hot.selectColumn(selection.name)
+        }else{
+            window.hot.selectColumns(name)
+        }
+    } else
+    if(selection.element.toLowerCase()==='row'){
+        console.log('im a row')
+        let name = +selection.name;
+        if(isNaN(name)){
+            window.hot.selectRows(selection.name)
+        }else{
+            window.hot.selectRows(name)
+        }
+    }
+
 };
 
-tfx.format = (selection, type) => {
+tfx.format = (selection, {type}) => {
     if (!selection) {
         return;
     }
-    selection = selection === 'current' ? window.hot.getSelected() : parseSelection(selection);
+    console.log(selection)
+    console.log(type)
+    // selection = selection === 'current' ? window.hot.getSelected() : parseSelection(selection);
     const typeConfigs = {
         'date': {
             correctFormat: true,
@@ -81,9 +127,28 @@ tfx.format = (selection, type) => {
             validator: undefined
         }
     };
-    for (const [rowStart, columnStart, rowEnd, columnEnd] of selection) {
-        for (let row = rowStart; row <= rowEnd; row++) {
-            for (let column = columnStart; column <= columnEnd; column++) {
+    if(selection.element.toLowerCase()==='column'){
+        console.log('im a columns')
+        let name = +selection.name;
+        if(isNaN(name)){
+            console.log(selection.name)
+            window.hot.selectColumn(selection.name)
+        }else{
+            window.hot.selectColumns(name)
+        }
+    } else
+    if(selection.element.toLowerCase()==='row'){
+        console.log('im a row')
+        let name = +selection.name;
+        if(isNaN(name)){
+            window.hot.selectRows(selection.name)
+        }else{
+            window.hot.selectRows(name)
+        }
+    }
+    for (const {from, to} of window.hot.getSelectedRange()) {
+        for (let row = from.row; row <= to.row; row++) {
+            for (let column = from.col; column <= to.col; column++) {
                 window.hot.setCellMetaObject(row, column, {
                     validator: type,
                     renderer: type,
@@ -93,6 +158,7 @@ tfx.format = (selection, type) => {
             }
         }
     }
+
     window.hot.validateCells();
     window.hot.render();
 };
