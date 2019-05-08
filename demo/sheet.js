@@ -13,35 +13,86 @@ window.onload = () => {
         colHeaders: true,
         filters: true,
         dropdownMenu: true,
+        outsideClickDeselects: false,
         licenseKey: 'non-commercial-and-evaluation'
     });
     window.Handsontable = Handsontable;
     window.hot = hot;
 };
 
-columns = {
-    'A': 0,
-    'B': 1,
-    'C': 2,
-    'D': 3,
-    'E': 4
-};
+const tfx = {};
 
-typeConfigs = {
-    'date': {
-        correctFormat: true,
-        dateFormat: 'MM/DD/YYYY'
+window.tfx = tfx;
+
+function getColumnIndex(columnLetter) {
+    const charCode = columnLetter.charCodeAt(0);
+    const charCodeForA = 'a'.charCodeAt(0);
+    const charCodeForCapitalA = 'A'.charCodeAt(0);
+    return charCode >= charCodeForA ? charCode - charCodeForA : charCode - charCodeForCapitalA;
+}
+
+function getRowIndex(rowLetter) {
+    return parseInt(rowLetter) - 1;
+}
+
+function parseCell(cell) {
+    let [columnLetter, ...rowLetter] = cell;
+    rowLetter = rowLetter.join('');
+    return [getRowIndex(rowLetter), getColumnIndex(columnLetter)];
+}
+
+function isRange(element) {
+    return element.indexOf(':') > 0;
+}
+
+function parseRange(element) {
+    let start, end;
+    if (isRange(element)) {
+        [start, end] = element.split(':');
+    } else {
+        start = element;
+        end = element;
     }
+    start = parseCell(start);
+    end = parseCell(end);
+    return [...start, ...end];
+}
+
+function parseSelection(selection) {
+    return selection.split(',').map(element => parseRange(element));
+}
+
+tfx.select = selection => {
+    // e.g. tfx.select('A1:B2,B3,D2:E2')
+    window.hot.selectCells(parseSelection(selection));
 };
 
-window.hotFormat = (columnLabel, type) => {
-    for (let i = 1; i < 4; i++) {
-        window.hot.setCellMetaObject(i, columns[columnLabel], {
-            ...typeConfigs[type],
-            validator: type,
-            renderer: type,
-            editor: type
-        });
+tfx.format = (selection, type) => {
+    if (!selection) {
+        return;
+    }
+    selection = selection === 'current' ? window.hot.getSelected() : parseSelection(selection);
+    const typeConfigs = {
+        'date': {
+            correctFormat: true,
+            dateFormat: 'MM/DD/YYYY'
+        },
+        'text': {
+            validator: undefined
+        }
+    };
+    for (const [rowStart, columnStart, rowEnd, columnEnd] of selection) {
+        for (let row = rowStart; row <= rowEnd; row++) {
+            for (let column = columnStart; column <= columnEnd; column++) {
+                window.hot.setCellMetaObject(row, column, {
+                    validator: type,
+                    renderer: type,
+                    editor: type,
+                    ...typeConfigs[type]
+                });
+            }
+        }
     }
     window.hot.validateCells();
+    window.hot.render();
 };

@@ -57,9 +57,9 @@
                 <d2l-menu-item text="Direction" id="first-item"></d2l-menu-item>
                 <d2l-menu-item text="Number">
                     <d2l-menu>
-                        <d2l-menu-item text="Plain text"></d2l-menu-item>
-                        <d2l-menu-item text="Number"></d2l-menu-item>
-                        <d2l-menu-item text="Date" onclick="hotFormat('D', 'date')"></d2l-menu-item>
+                        <d2l-menu-item text="Plain text" onclick="tfx.format('current', 'text')"></d2l-menu-item>
+                        <d2l-menu-item text="Number" onclick="tfx.format('current', 'numeric')"></d2l-menu-item>
+                        <d2l-menu-item text="Date" onclick="tfx.format('current', 'date')"></d2l-menu-item>
                     </d2l-menu>
                 </d2l-menu-item>
         </d2l-dropdown-menu>
